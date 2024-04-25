@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg187"
+   width="1000"
+   height="1000"
+   viewBox="0 0 1000 1000"
+   sodipodi:docname="level.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs191" />
+  <sodipodi:namedview
+     id="namedview189"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     showgrid="false"
+     inkscape:zoom="1.027"
+     inkscape:cx="456.66991"
+     inkscape:cy="499.51315"
+     inkscape:window-width="2560"
+     inkscape:window-height="1334"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g193" />
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Image"
+     id="g193">
+    <image
+       width="1000"
+       height="1000"
+       preserveAspectRatio="none"
+       xlink:href="level.png"
+       id="image195"
+       style="display:none" />
+    <path
+       style="fill:#000000"
+       d="M 500,1000 H 0 V 500 0 h 500 500 v 500 500 z m 0.44956,-100 H 899.9619 l 0.54183,-2.25 0.54183,-2.25 L 900.77278,498 900.5,100.5 h -400 -400 l -0.25581,398.5 -0.255818,398.5 0.474428,1.25 0.47443,1.25 z"
+       id="path197" />
+  </g>
+</svg>

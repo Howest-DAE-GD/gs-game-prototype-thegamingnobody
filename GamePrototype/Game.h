@@ -1,5 +1,11 @@
 #pragma once
 #include "BaseGame.h"
+#include "Vector2f.h"
+#include "Camera.h"
+#include "Object.h"
+#include <memory>
+#include <Texture.h>
+
 class Game : public BaseGame
 {
 public:
@@ -27,4 +33,11 @@ private:
 	void Initialize();
 	void Cleanup( );
 	void ClearBackground( ) const;
+
+	void InitializeLevel();
+
+	std::unique_ptr<Camera> m_Camera;
+	std::unique_ptr<dae::Object> m_Player;
+	std::vector<std::unique_ptr<dae::Object>> m_LevelObjects;
+	std::unique_ptr<Texture> m_LevelTexture;
 };
