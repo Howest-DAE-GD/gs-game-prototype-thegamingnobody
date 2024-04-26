@@ -4,21 +4,35 @@
 
 namespace dae
 {
+	enum class StateOfMatter
+	{
+		solid, //detects collision, player can't move onto object
+		nonSolid, //detects collision, player is able to move onto object
+		noCollision //no collision detection
+	};
+
 	class Object
 	{
 	public:
 		Object();
-		Object(const Rectf& shape, float const moveSpeed = 0, bool const canMove = false);
+		Object(const Rectf& shape, const StateOfMatter& stateOfMatter = StateOfMatter::solid, float const moveSpeed = 0);
 
 		virtual void Update( float elapsedSec );
 		virtual void Draw() const;
 
-		void AddPositionOffset(const Vector2f& direction);
-		void AddPositionOffset(float const directionX, float const directionY);
+		void AddDirectionCurrentFrame(const Vector2f& direction);
+		void AddDirectionCurrentFrame(float const directionX, float const directionY);
+
+		Point2f PredictPosition(float elapsedSec);
 
 		float GetMoveSpeed() const { return m_MoveSpeed; }
 
 		Rectf GetShape() { return m_Shape; }
+
+		StateOfMatter GetStateOfMatter() const { return m_StateOfMatter; }
+
+		void ResetDirectionThisFrame() { m_DirectionThisFrame = Vector2f(0, 0); }
+
 
 	private:
 		Rectf m_Shape{};
@@ -26,5 +40,6 @@ namespace dae
 		bool m_CanMove{};
 
 		Vector2f m_DirectionThisFrame{};
+		StateOfMatter m_StateOfMatter{};
 	};
 }

@@ -36,6 +36,10 @@ private:
 
 	void InitializeLevel();
 
+
+
+	Rectf CalculateOverlap(const Rectf& r1, const Rectf& r2);
+
 	std::unique_ptr<Camera> m_Camera;
 	std::unique_ptr<dae::Object> m_Player;
 	std::vector<std::unique_ptr<dae::Object>> m_LevelObjects;

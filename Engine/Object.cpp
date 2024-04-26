@@ -5,24 +5,37 @@ dae::Object::Object()
 	: m_Shape(Rectf(50, 50, 40, 40))
 	, m_MoveSpeed(250)
 	, m_CanMove(true)
+	, m_DirectionThisFrame()
+	, m_StateOfMatter(StateOfMatter::solid)
 {
 }
 
-dae::Object::Object(const Rectf& shape, float const moveSpeed, bool const canMove)
+dae::Object::Object(const Rectf& shape, const StateOfMatter& stateOfMatter, float const moveSpeed)
 	: m_Shape(shape)
 	, m_MoveSpeed(moveSpeed)
-	, m_CanMove(canMove)
+	, m_CanMove(true)
+	, m_DirectionThisFrame()
+	, m_StateOfMatter(stateOfMatter)
 {
 }
 
-void dae::Object::Update(float elapsedSec)
+void dae::Object::Update(float)
+{
+	m_Shape.left	+= m_DirectionThisFrame.x;
+	m_Shape.bottom	+= m_DirectionThisFrame.y;
+
+	m_DirectionThisFrame = Vector2f(0.0f, 0.0f);
+}
+
+Point2f dae::Object::PredictPosition(float elapsedSec)
 {
 	m_DirectionThisFrame = m_DirectionThisFrame.Normalized();
 
-	m_Shape.left	+= m_DirectionThisFrame.x * m_MoveSpeed * elapsedSec;
-	m_Shape.bottom	+= m_DirectionThisFrame.y * m_MoveSpeed * elapsedSec;
+	m_DirectionThisFrame.x = m_DirectionThisFrame.x * m_MoveSpeed * elapsedSec;
+	m_DirectionThisFrame.y = m_DirectionThisFrame.y * m_MoveSpeed * elapsedSec;
 
-	m_DirectionThisFrame = Vector2f(0.0f, 0.0f);
+
+	return Point2f(m_Shape.left + m_DirectionThisFrame.x, m_Shape.bottom + m_DirectionThisFrame.y);
 }
 
 void dae::Object::Draw() const
@@ -30,12 +43,12 @@ void dae::Object::Draw() const
 	utils::FillRect(m_Shape);
 }
 
-void dae::Object::AddPositionOffset(const Vector2f& direction)
+void dae::Object::AddDirectionCurrentFrame(const Vector2f& direction)
 {
-	AddPositionOffset(direction.x, direction.y);
+	AddDirectionCurrentFrame(direction.x, direction.y);
 }
 
-void dae::Object::AddPositionOffset(float const directionX, float const directionY)
+void dae::Object::AddDirectionCurrentFrame(float const directionX, float const directionY)
 {
 	if (m_CanMove)
 	{
@@ -43,3 +56,4 @@ void dae::Object::AddPositionOffset(float const directionX, float const directio
 		m_DirectionThisFrame.y += directionY;
 	}
 }
+

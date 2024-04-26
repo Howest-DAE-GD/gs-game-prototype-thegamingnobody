@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Game.h"
 #include "utils.h"
+#include <iostream>
+#include <chrono>
 
 Game::Game( const Window& window ) 
 	:BaseGame{ window }
@@ -16,8 +18,7 @@ Game::~Game( )
 void Game::Initialize( )
 {
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
-	m_Player = std::make_unique<dae::Object>(dae::Object(Rectf(50, 50, 40, 40), 250, true));
-	//m_LevelTexture = std::make_unique<Texture>("level.png");
+	m_Player = std::make_unique<dae::Object>(Rectf(75, 75, 40, 40), dae::StateOfMatter::solid, 250);
 	InitializeLevel();
 }
 
@@ -32,21 +33,47 @@ void Game::Update( float elapsedSec )
 
 	if (pStates[SDL_SCANCODE_UP])
 	{
-		m_Player->AddPositionOffset(0, 1);
+		m_Player->AddDirectionCurrentFrame(0, 1);
 	}
 	if (pStates[SDL_SCANCODE_DOWN])
 	{
-		m_Player->AddPositionOffset(0, -1);
+		m_Player->AddDirectionCurrentFrame(0, -1);
 	}
 	if ( pStates[SDL_SCANCODE_RIGHT] )
 	{
-		m_Player->AddPositionOffset(1, 0);
+		m_Player->AddDirectionCurrentFrame(1, 0);
 	}
 	if ( pStates[SDL_SCANCODE_LEFT] )
 	{
-		m_Player->AddPositionOffset(-1, 0);
+		m_Player->AddDirectionCurrentFrame(-1, 0);
 	}
 
+	auto const playerPredictedPos{ m_Player->PredictPosition(elapsedSec) };
+
+	auto playerShape{ m_Player->GetShape() };
+	playerShape.left = playerPredictedPos.x;
+	playerShape.bottom = playerPredictedPos.y;
+
+	for (auto& wall : m_LevelObjects)
+	{
+		auto const wallShape{ wall->GetShape() };
+
+		if (utils::IsOverlapping(playerShape, wallShape))
+		{
+			switch (wall->GetStateOfMatter())
+			{
+			case dae::StateOfMatter::solid:
+				std::cout << "collision solid\n";
+				m_Player->ResetDirectionThisFrame();
+				break;
+			case dae::StateOfMatter::nonSolid:
+				std::cout << "collision non solid\n";
+				break;
+			case dae::StateOfMatter::noCollision:
+				break;
+			}
+		}
+	}
 
 	m_Player->Update(elapsedSec);
 }
@@ -168,8 +195,19 @@ void Game::InitializeLevel()
 	float const canvasHeight	{ 1000 };
 	float const wallThickness	{ 50 };
 
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0, wallThickness,	canvasHeight)));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(canvasWidth - wallThickness,							0, wallThickness,	canvasHeight)));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0, canvasWidth,		wallThickness)));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0, canvasHeight - wallThickness, canvasWidth,		wallThickness)));
+	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0, wallThickness,	 canvasHeight), dae::StateOfMatter::solid));
+	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(canvasWidth - wallThickness,							0, wallThickness,	 canvasHeight), dae::StateOfMatter::solid));
+	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0,	 canvasWidth,	wallThickness), dae::StateOfMatter::solid));
+	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0, canvasHeight - wallThickness,	 canvasWidth,	wallThickness), dae::StateOfMatter::solid));
+	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						200,						  200, wallThickness,	wallThickness), dae::StateOfMatter::nonSolid));
+}
+
+Rectf Game::CalculateOverlap(const Rectf& r1, const Rectf& r2)
+{
+	float const left	{ std::max(r1.left, r2.left) };
+	float const bottom	{ std::max(r1.bottom, r2.bottom) };
+	float const right	{ std::min(r1.left + r1.width, r2.left + r2.width) };
+	float const top		{ std::min(r1.bottom + r1.height, r2.bottom + r2.height) };
+
+	return Rectf(left, bottom, right - left, top - bottom);
 }
