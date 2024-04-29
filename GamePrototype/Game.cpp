@@ -56,7 +56,16 @@ void Game::Update( float elapsedSec )
 
 	for (auto& wall : m_LevelObjects)
 	{
-		auto const wallShape{ wall->GetShape() };
+		auto wallShape{ wall->GetShape() };
+		if (wall->GetStateOfMatter() == dae::StateOfMatter::nonSolid)
+		{
+			int const outerBorder{ 2 };
+
+			wallShape.width  -= 2 * outerBorder;
+			wallShape.height -= 2 * outerBorder;
+			wallShape.left   += outerBorder;
+			wallShape.bottom += outerBorder;
+		}
 
 		if (utils::IsOverlapping(playerShape, wallShape))
 		{
@@ -84,11 +93,7 @@ void Game::Draw( ) const
 
 	glPushMatrix();
 
-
-
 	m_Camera->Transform(m_Player->GetShape(), false);
-
-	//m_LevelTexture->Draw();
 
 	utils::SetColor(Color4f(0.0f, 0.0f, 0.0f, 1.0f));
 	for (auto& object : m_LevelObjects)
@@ -98,8 +103,6 @@ void Game::Draw( ) const
 	
 	utils::SetColor(Color4f(0.4f, 0.4f, 0.4f, 1.0f));
 	m_Player->Draw();
-
-
 
 	glPopMatrix();
 }
@@ -203,24 +206,34 @@ void Game::InitializeLevel()
 	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						  0,							0,	 canvasWidth,	wallThickness),    dae::StateOfMatter::solid, black));
 	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						  0, canvasHeight - wallThickness,	 canvasWidth,	wallThickness),    dae::StateOfMatter::solid, black));
 	
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 4, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 5, wallThickness * 1, wallThickness * 2), dae::StateOfMatter::solid, black));
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 8, wallThickness * 5, wallThickness * 1), dae::StateOfMatter::solid, black));
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 9, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 6, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
-	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 2, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  2, wallThickness *  4, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  2, wallThickness *  5, wallThickness * 1, wallThickness * 2), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  2, wallThickness *  8, wallThickness * 5, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  6, wallThickness *  9, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  6, wallThickness *  6, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  6, wallThickness *  2, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  7, wallThickness *  2, wallThickness * 4, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 10, wallThickness *  4, wallThickness * 3, wallThickness * 3), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 12, wallThickness *  7, wallThickness * 1, wallThickness * 5), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 13, wallThickness *  9, wallThickness * 2, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 14, wallThickness *  4, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 16, wallThickness *  1, wallThickness * 1, wallThickness * 3), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 16, wallThickness *  6, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 16, wallThickness *  7, wallThickness * 1, wallThickness * 5), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 16, wallThickness * 11, wallThickness * 5, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  8, wallThickness * 11, wallThickness * 4, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  8, wallThickness * 12, wallThickness * 1, wallThickness * 6), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  4, wallThickness * 17, wallThickness * 4, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  4, wallThickness * 11, wallThickness * 1, wallThickness * 6), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  1, wallThickness * 11, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  2, wallThickness * 13, wallThickness * 1, wallThickness * 3), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness *  4, wallThickness * 19, wallThickness * 1, wallThickness * 2), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 10, wallThickness * 17, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 12, wallThickness * 17, wallThickness * 1, wallThickness * 3), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 13, wallThickness * 17, wallThickness * 6, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 18, wallThickness * 18, wallThickness * 1, wallThickness * 2), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 12, wallThickness * 13, wallThickness * 1, wallThickness * 3), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( wallThickness * 12, wallThickness * 13, wallThickness * 6, wallThickness * 1), dae::StateOfMatter::solid, black));
 	
-	//m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						200,						  200, wallThickness,	wallThickness), dae::StateOfMatter::nonSolid, gold));
-	
-	
-}
-
-Rectf Game::CalculateOverlap(const Rectf& r1, const Rectf& r2)
-{
-	float const left	{ std::max(r1.left, r2.left) };
-	float const bottom	{ std::max(r1.bottom, r2.bottom) };
-	float const right	{ std::min(r1.left + r1.width, r2.left + r2.width) };
-	float const top		{ std::min(r1.bottom + r1.height, r2.bottom + r2.height) };
-
-	return Rectf(left, bottom, right - left, top - bottom);
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf( 200, 150, wallThickness, wallThickness), dae::StateOfMatter::nonSolid, gold));
 }
