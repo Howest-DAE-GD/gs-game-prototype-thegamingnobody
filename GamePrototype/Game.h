@@ -2,9 +2,10 @@
 #include "BaseGame.h"
 #include "Vector2f.h"
 #include "Camera.h"
-#include "Object.h"
+#include "BaseObject.h"
 #include <memory>
 #include <Texture.h>
+#include "Player.h"
 
 class Game : public BaseGame
 {
@@ -41,7 +42,6 @@ private:
 	Rectf CalculateOverlap(const Rectf& r1, const Rectf& r2);
 
 	std::unique_ptr<Camera> m_Camera;
-	std::unique_ptr<dae::Object> m_Player;
-	std::vector<std::unique_ptr<dae::Object>> m_LevelObjects;
-	std::unique_ptr<Texture> m_LevelTexture;
+	std::unique_ptr<dae::Player> m_Player;
+	std::vector<std::unique_ptr<dae::BaseObject>> m_LevelObjects;
 };

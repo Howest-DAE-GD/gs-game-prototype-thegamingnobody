@@ -18,7 +18,7 @@ Game::~Game( )
 void Game::Initialize( )
 {
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
-	m_Player = std::make_unique<dae::Object>(Rectf(75, 75, 40, 40), dae::StateOfMatter::solid, 250);
+	m_Player = std::make_unique<dae::Player>(Rectf(75, 75, 25, 25), dae::StateOfMatter::solid, Color4f(0.6f, 0.6f, 0.6f, 1.0f), 250);
 	InitializeLevel();
 }
 
@@ -191,15 +191,28 @@ void Game::ClearBackground( ) const
 
 void Game::InitializeLevel()
 {
-	float const canvasWidth		{ 1000 };
-	float const canvasHeight	{ 1000 };
+	float const canvasWidth		{ 1100 };
+	float const canvasHeight	{ 1100 };
 	float const wallThickness	{ 50 };
 
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0, wallThickness,	 canvasHeight), dae::StateOfMatter::solid));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(canvasWidth - wallThickness,							0, wallThickness,	 canvasHeight), dae::StateOfMatter::solid));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0,							0,	 canvasWidth,	wallThickness), dae::StateOfMatter::solid));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						  0, canvasHeight - wallThickness,	 canvasWidth,	wallThickness), dae::StateOfMatter::solid));
-	m_LevelObjects.emplace_back(std::make_unique<dae::Object>(Rectf(						200,						  200, wallThickness,	wallThickness), dae::StateOfMatter::nonSolid));
+	Color4f black{ Color4f(0.1f, 0.1f, 0.1f, 1.0f) };
+	Color4f gold{ Color4f(0.855f, 0.647f, 0.008f, 1.0f) };
+
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						  0,							0, wallThickness,	 canvasHeight),    dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(canvasWidth - wallThickness,							0, wallThickness,	 canvasHeight),    dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						  0,							0,	 canvasWidth,	wallThickness),    dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						  0, canvasHeight - wallThickness,	 canvasWidth,	wallThickness),    dae::StateOfMatter::solid, black));
+	
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 4, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 5, wallThickness * 1, wallThickness * 2), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 2, wallThickness * 8, wallThickness * 5, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 9, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 6, wallThickness * 3, wallThickness * 1), dae::StateOfMatter::solid, black));
+	m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(wallThickness * 6, wallThickness * 2, wallThickness * 1, wallThickness * 4), dae::StateOfMatter::solid, black));
+	
+	//m_LevelObjects.emplace_back(std::make_unique<dae::BaseObject>(Rectf(						200,						  200, wallThickness,	wallThickness), dae::StateOfMatter::nonSolid, gold));
+	
+	
 }
 
 Rectf Game::CalculateOverlap(const Rectf& r1, const Rectf& r2)
