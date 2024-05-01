@@ -14,6 +14,7 @@ namespace dae
 	{
 	public:
 		LevelObject();
+		LevelObject(const Rectf& actualShape, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
 		LevelObject(const Rectf& shapeInTiles, float const TileSide, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
 
 		LevelObjectTypes GetObjecttype() const { return m_ObjectType; }
@@ -24,7 +25,6 @@ namespace dae
 		StateOfMatter GetStateByObjectType(const LevelObjectTypes& type);
 		Color4f GetColorByObjectType(const LevelObjectTypes& type);
 
-		Rectf m_RectInTiles;
 		LevelObjectTypes const m_ObjectType;
 	};
 }

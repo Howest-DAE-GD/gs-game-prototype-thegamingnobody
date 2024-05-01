@@ -62,14 +62,14 @@ void Game::Update( float elapsedSec )
 
 	std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true);
 
-	//if (utils::IsOverlapping(playerShape, )
-	//{
-
-	//}
+	if (utils::IsOverlapping(playerShape, m_GoalObject->GetShape()))
+	{
+		std::cout << "goal reached\n";
+	}
 
 	thread.join();
 
-	if (not IsRectValid(playerShape, true))
+	if (not futureBool.get())
 	{
 		std::cout << "collision wall\n";
 		m_Player->ResetDirectionThisFrame();
@@ -94,6 +94,8 @@ void Game::Draw( ) const
 	{
 		object->Draw();
 	}
+
+	m_GoalObject->Draw();
 	
 	utils::SetColor(Color4f(0.4f, 0.4f, 0.4f, 1.0f));
 	m_Player->Draw();
@@ -190,6 +192,9 @@ void Game::InitializeLevel()
 {
 	//float const canvasWidth	{ 1100 };
 	//float const canvasHeight	{ 1100 };
+
+	//nr of columns: 22 (maze can only use 1 to 20)
+	//nr of rows: 22 (maze can only use 1 to 20)
 	float const wallThickness	{ 50 };
 
 	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 0,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
@@ -226,27 +231,51 @@ void Game::InitializeLevel()
 	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12, 13,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
 	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12, 13,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
 	
+	GenerateNewGoal(wallThickness);
 }
 
 std::pair<int, int> Game::GetRandomGridLocation(int const maxX, int const maxY)
 {
+
+
 	return std::pair<int, int>((rand() % (maxX - 1)) + 1, (rand() % (maxY - 1)) + 1);
 }
 
 void Game::GenerateNewGoal(float const wallSize)
 {
-	//if (wall->GetObjecttype() == dae::LevelObjectTypes::Goal)
-	//{
-	//	int const outerBorder{ 2 };
+	bool isNewGoalValid{ false };
+	Rectf GoalShape{};
+	
+	while (not isNewGoalValid)
+	{
+		//generate new rect
+		auto newGoalLocation{ GetRandomGridLocation(21, 21) };
+		GoalShape = Rectf(static_cast<float>(newGoalLocation.first), static_cast<float>(newGoalLocation.second), 1, 1);
 
-	//	wallShape.width -= 2 * outerBorder;
-	//	wallShape.height -= 2 * outerBorder;
-	//	wallShape.left += outerBorder;
-	//	wallShape.bottom += outerBorder;
-	//}
+		//edit rect for collision reasons
+		GoalShape = dae::LevelObject::MakeGlobalRect(GoalShape, wallSize);
 
+		int const outerBorder{ 2 };
+		GoalShape.width	 -= 2 * outerBorder;
+		GoalShape.height -= 2 * outerBorder;
+		GoalShape.left	 += outerBorder;
+		GoalShape.bottom += outerBorder;
 
-	m_GoalObject = std::make_unique<dae::LevelObject>(Rectf(4, 3, 1, 1), wallSize, dae::LevelObjectTypes::Goal);
+		//check validity
+		std::promise<bool> promiseBool;
+		std::future<bool> futureBool = promiseBool.get_future();
+
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true);
+		
+		thread.join();
+
+		if (futureBool.get())
+		{
+			isNewGoalValid = true;
+		}
+	}
+
+	m_GoalObject = std::make_unique<dae::LevelObject>(GoalShape, dae::LevelObjectTypes::Goal);
 }
 
 bool Game::IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal)

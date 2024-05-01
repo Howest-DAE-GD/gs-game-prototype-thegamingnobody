@@ -3,14 +3,18 @@
 
 dae::LevelObject::LevelObject()
 	: BaseObject(MakeGlobalRect(Rectf(0, 0, 1, 1), 50), GetStateByObjectType(LevelObjectTypes::Wall), GetColorByObjectType(LevelObjectTypes::Wall))
-	, m_RectInTiles(Rectf(0, 0, 1, 1))
 	, m_ObjectType(LevelObjectTypes::Wall)
+{
+}
+
+dae::LevelObject::LevelObject(const Rectf& actualShape, const LevelObjectTypes& objectType)
+	: BaseObject(actualShape, GetStateByObjectType(objectType), GetColorByObjectType(objectType))
+	, m_ObjectType(objectType)
 {
 }
 
 dae::LevelObject::LevelObject(const Rectf& shapeInTiles, float const tileSide, const LevelObjectTypes& objectType)
 	: BaseObject(MakeGlobalRect(shapeInTiles, tileSide), GetStateByObjectType(objectType), GetColorByObjectType(objectType))
-	, m_RectInTiles(shapeInTiles)
 	, m_ObjectType(objectType)
 {
 }
