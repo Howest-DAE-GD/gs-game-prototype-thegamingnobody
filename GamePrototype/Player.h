@@ -20,9 +20,12 @@ namespace dae
 
 		void ResetDirectionThisFrame() { m_DirectionThisFrame = Vector2f(0, 0); }
 
+		void ResetPosition();
+
 	private:
 		float const m_MoveSpeed{};
 
 		Vector2f m_DirectionThisFrame{};
+		Rectf const m_PlayerStartingShape;
 	};
 }

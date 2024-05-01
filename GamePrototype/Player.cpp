@@ -4,12 +4,14 @@
 dae::Player::Player() 
 	: BaseObject()
 	, m_MoveSpeed(250)
+	, m_PlayerStartingShape(Rectf(75.0f, 75.0f, 25.0f, 25.0f))
 {
 }
 
 dae::Player::Player(const Rectf& shape, const StateOfMatter& stateOfMatter, const Color4f& Color, const float moveSpeed)
 	: BaseObject(shape, stateOfMatter, Color)
 	, m_MoveSpeed(moveSpeed)
+	, m_PlayerStartingShape(shape)
 {
 }
 
@@ -43,3 +45,7 @@ void dae::Player::AddDirectionCurrentFrame(float const directionX, float const d
 	m_DirectionThisFrame.y += directionY;
 }
 
+void dae::Player::ResetPosition()
+{
+	m_Shape = m_PlayerStartingShape;
+}

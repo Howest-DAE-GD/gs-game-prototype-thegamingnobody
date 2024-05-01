@@ -23,6 +23,8 @@ void Game::Initialize( )
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
 	m_Player = std::make_unique<dae::Player>(Rectf(75.0f, 75.0f, 25.0f, 25.0f), dae::StateOfMatter::solid, Color4f(0.6f, 0.6f, 0.6f, 1.0f), 250.0f);
 	InitializeLevel();
+	std::cout	<< "Find the exit of this floor!\n"
+				<< "Score: 0\n";
 }
 
 void Game::Cleanup( )
@@ -31,6 +33,8 @@ void Game::Cleanup( )
 
 void Game::Update( float elapsedSec )
 {
+	bool goalNotReached{ true }; //if reached this frame
+
 	// Check keyboard state
 	const Uint8 *pStates = SDL_GetKeyboardState( nullptr );
 
@@ -51,34 +55,52 @@ void Game::Update( float elapsedSec )
 		m_Player->AddDirectionCurrentFrame(-1, 0);
 	}
 
+	//make predicted player shape
 	auto const playerPredictedPos{ m_Player->PredictPosition(elapsedSec) };
 
 	auto playerShape{ m_Player->GetShape() };
 	playerShape.left = playerPredictedPos.x;
 	playerShape.bottom = playerPredictedPos.y;
 
-	std::promise<bool> promiseBool;
-	std::future<bool> futureBool = promiseBool.get_future();
+	//set up threading for player wall collision
+	std::vector<std::future<bool>> futureBools;
+	std::vector<std::jthread> threads;
 
-	std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true);
+	unsigned int const nrOfThreads{ 1 };
+	unsigned int const nrPerThread{ static_cast<int>(m_LevelWalls.size()) / nrOfThreads };
+
+	for (unsigned int i = 0; i < nrOfThreads; i++)
+	{
+		std::promise<bool> promiseBool;
+		futureBools.emplace_back(promiseBool.get_future());
+		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread);
+	}
+
+	threads.clear();
 
 	if (utils::IsOverlapping(playerShape, m_GoalObject->GetShape()))
 	{
-		std::cout << "goal reached\n";
+		goalNotReached = false;
 	}
 
-	thread.join();
-
-	if (not futureBool.get())
+	for (auto& future : futureBools)
 	{
-		std::cout << "collision wall\n";
-		m_Player->ResetDirectionThisFrame();
-
+		if (not future.get())
+		{
+			m_Player->ResetDirectionThisFrame();
+			break;
+		}
 	}
-	
-	//todo: goal collision
 
-	m_Player->Update(elapsedSec);
+	if (goalNotReached)
+	{
+		m_Player->Update(elapsedSec);
+	}
+	else
+	{
+		MakeNextFloor();
+	}
+
 }
 
 void Game::Draw( ) const
@@ -92,7 +114,7 @@ void Game::Draw( ) const
 	utils::SetColor(Color4f(0.0f, 0.0f, 0.0f, 1.0f));
 	for (auto& object : m_LevelWalls)
 	{
-		object->Draw();
+		object.Draw();
 	}
 
 	m_GoalObject->Draw();
@@ -195,42 +217,88 @@ void Game::InitializeLevel()
 
 	//nr of columns: 22 (maze can only use 1 to 20)
 	//nr of rows: 22 (maze can only use 1 to 20)
-	float const wallThickness	{ 50 };
 
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 0,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(21,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 0,  0, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 0, 21, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 0,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(21,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 0,  0, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 0, 21, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
 	
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 2,  4,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 2,  5,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 2,  8,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 6,  9,  1,  4), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 6,  6,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 6,  2,  1,  4), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 7,  2,  4,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(10,  4,  3,  3), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12,  7,  1,  5), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(13,  9,  2,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(14,  4,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(16,  1,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(16,  6,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(16,  7,  1,  5), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(16, 11,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 8, 11,  4,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 8, 12,  1,  6), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 4, 17,  4,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 4, 11,  1,  6), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 1, 11,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 2, 13,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf( 4, 19,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(10, 17,  1,  4), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12, 17,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(13, 17,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(18, 18,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12, 13,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
-	m_LevelWalls.emplace_back(std::make_unique<dae::LevelObject>(Rectf(12, 13,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 2,  4,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 2,  5,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 2,  8,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 6,  9,  1,  4), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 6,  6,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(6, 2, 1, 4), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(7, 2, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(10, 4, 3, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(12, 7, 1, 5), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(13,  9,  2,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(14, 4, 3, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(16, 1, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(16, 6, 3, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(16, 7, 1, 5), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(16, 11,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(8, 11, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(8, 12, 1, 6), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(4, 17, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(4, 11, 1, 6), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf( 1, 11,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(2, 13, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(4, 19, 1, 2), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(10, 17, 1, 4), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(12, 17, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(13, 17,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(18, 18,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(12, 13,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
+	m_LevelWalls.emplace_back(dae::LevelObject(Rectf(12, 13,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
+
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 0,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(21,  0,  1, 22), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 0,  0, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 0, 21, 22,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 2,  4,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 2,  5,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 2,  8,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 6,  9,  1,  4), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 6,  6,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(6, 2, 1, 4), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(7, 2, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(10, 4, 3, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(12, 7, 1, 5), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(13,  9,  2,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(14, 4, 3, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(16, 1, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(16, 6, 3, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(16, 7, 1, 5), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(16, 11,  5,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(8, 11, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(8, 12, 1, 6), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(4, 17, 4, 1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(4, 11, 1, 6), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf( 1, 11,  3,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(2, 13, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(4, 19, 1, 2), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(10, 17, 1, 4), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(12, 17, 1, 3), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(13, 17,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(18, 18,  1,  2), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(12, 13,  1,  3), wallThickness, dae::LevelObjectTypes::Wall));
+	//m_LevelWalls.emplace_back(std::make_shared<dae::LevelObject>(Rectf(12, 13,  6,  1), wallThickness, dae::LevelObjectTypes::Wall));
 	
+	//std::chrono::high_resolution_clock::time_point startTime{};
+	//std::chrono::high_resolution_clock::time_point endTime{};
+
+	//startTime = std::chrono::high_resolution_clock::now();
+
+
+	//endTime = std::chrono::high_resolution_clock::now();
+	//std::cout << "time: " << std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() << " ms\n";
+
 	GenerateNewGoal(wallThickness);
 }
 
@@ -245,7 +313,7 @@ void Game::GenerateNewGoal(float const wallSize)
 {
 	bool isNewGoalValid{ false };
 	Rectf GoalShape{};
-	
+
 	while (not isNewGoalValid)
 	{
 		//generate new rect
@@ -253,20 +321,20 @@ void Game::GenerateNewGoal(float const wallSize)
 		GoalShape = Rectf(static_cast<float>(newGoalLocation.first), static_cast<float>(newGoalLocation.second), 1, 1);
 
 		//edit rect for collision reasons
-		GoalShape = dae::LevelObject::MakeGlobalRect(GoalShape, wallSize);
+		GoalShape = MakeGlobalRect(GoalShape, wallSize);
 
 		int const outerBorder{ 2 };
-		GoalShape.width	 -= 2 * outerBorder;
+		GoalShape.width -= 2 * outerBorder;
 		GoalShape.height -= 2 * outerBorder;
-		GoalShape.left	 += outerBorder;
+		GoalShape.left += outerBorder;
 		GoalShape.bottom += outerBorder;
 
 		//check validity
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true);
-		
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true, 0, static_cast<int>(m_LevelWalls.size()));
+
 		thread.join();
 
 		if (futureBool.get())
@@ -278,36 +346,77 @@ void Game::GenerateNewGoal(float const wallSize)
 	m_GoalObject = std::make_unique<dae::LevelObject>(GoalShape, dae::LevelObjectTypes::Goal);
 }
 
-bool Game::IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal)
+Rectf Game::MakeGlobalRect(const Rectf& rect, float const tileSide)
 {
-	Rectf globalRect{ rect };
+	Rectf result{ Rectf(rect.left * tileSide, rect.bottom * tileSide, rect.width * tileSide, rect.height * tileSide) };
+	return result;
+}
+
+//bool Game::IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck)
+//{
+//	Rectf globalRect{ rect };
+//
+//	if (not isRectAlreadyGlobal)
+//	{
+//		globalRect = MakeGlobalRect(rect);
+//	}
+//
+//	auto beginIt{ m_LevelWalls.begin() + startIndex };
+//	auto endIt{ beginIt + nrToCheck };
+//
+//	auto wallIt = std::find_if(std::execution::par, beginIt, endIt, [&](const std::unique_ptr<dae::LevelObject>& wall)
+//	{
+//		auto wallShape{ wall->GetShape() };
+//
+//		if (utils::IsOverlapping(globalRect, wallShape))
+//		{
+//			return true;
+//		}
+//
+//		return false;
+//	});
+//
+//	if (wallIt != endIt)
+//	{
+//		return false;
+//	}
+//
+//	return true;
+//}
+
+void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck)
+{
+	thread_local Rectf globalRect{ rect };
+
+	int const wallSize{ 50 };
 
 	if (not isRectAlreadyGlobal)
 	{
-		globalRect = dae::LevelObject::MakeGlobalRect(rect);
+		globalRect = Rectf(rect.left * wallSize, rect.bottom * wallSize, rect.width * wallSize, rect.height * wallSize);
 	}
 
-	auto wallIt = std::find_if(std::execution::par, m_LevelWalls.begin(), m_LevelWalls.end(), [&](const std::unique_ptr<dae::LevelObject>& wall) 
+	for (int i = startIndex; i < nrToCheck; i++)
 	{
-		auto wallShape{ wall->GetShape() };
+		auto wallShape{ m_LevelWalls[i].GetShape()};
 
 		if (utils::IsOverlapping(globalRect, wallShape))
 		{
-			return true;
+			promise.set_value(false);
+			return;
 		}
-
-		return false;
-	});
-
-	if (wallIt != m_LevelWalls.end())
-	{
-		return false;
 	}
 
-	return true;
+	promise.set_value(true);
 }
 
-void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal)
+void Game::MakeNextFloor()
 {
-	promise.set_value(IsRectValid(rect, isRectAlreadyGlobal));
+	auto asyncReturn{ std::async(std::launch::async, &Game::GenerateNewGoal, this, wallThickness)};
+
+	m_Player->ResetPosition();
+	system("cls");
+	std::cout	<< "Find the exit of this floor!\n" 
+				<< "Score: " << ++m_PlayerScore << "\n";
+
+	asyncReturn.get();
 }
