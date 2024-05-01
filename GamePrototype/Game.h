@@ -6,6 +6,8 @@
 #include <memory>
 #include <Texture.h>
 #include "Player.h"
+#include "LevelObject.h"
+#include <future>
 
 class Game : public BaseGame
 {
@@ -37,11 +39,13 @@ private:
 
 	void InitializeLevel();
 
-
-
-	Rectf CalculateOverlap(const Rectf& r1, const Rectf& r2);
+	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
+	void GenerateNewGoal(float const wallSize);
+	bool IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal);
+	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal);
 
 	std::unique_ptr<Camera> m_Camera;
 	std::unique_ptr<dae::Player> m_Player;
-	std::vector<std::unique_ptr<dae::BaseObject>> m_LevelObjects;
+	std::vector<std::unique_ptr<dae::LevelObject>> m_LevelWalls;
+	std::unique_ptr<dae::LevelObject> m_GoalObject;
 };
