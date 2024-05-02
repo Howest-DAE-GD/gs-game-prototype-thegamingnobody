@@ -45,7 +45,15 @@ void dae::Player::AddDirectionCurrentFrame(float const directionX, float const d
 	m_DirectionThisFrame.y += directionY;
 }
 
-void dae::Player::ResetPosition()
+void dae::Player::ResetPosition(const Rectf& shape)
 {
-	m_Shape = m_PlayerStartingShape;
+	if (shape.width > 0 and shape.height > 0)
+	{
+		m_Shape = shape;
+		
+	}
+	else
+	{
+		m_Shape = m_PlayerStartingShape;
+	}
 }

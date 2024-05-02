@@ -21,7 +21,8 @@ Game::~Game( )
 void Game::Initialize( )
 {
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
-	m_Player = std::make_unique<dae::Player>(Rectf(75.0f, 75.0f, 25.0f, 25.0f), dae::StateOfMatter::solid, Color4f(0.6f, 0.6f, 0.6f, 1.0f), 250.0f);
+	auto playerShape{ MakeNewPlayerShape() };
+	m_Player = std::make_unique<dae::Player>(playerShape, dae::StateOfMatter::solid, Color4f(0.6f, 0.6f, 0.6f, 1.0f), 300.0f);
 	InitializeLevel();
 	std::cout	<< "Find the exit of this floor!\n"
 				<< "Score: 0\n";
@@ -38,19 +39,19 @@ void Game::Update( float elapsedSec )
 	// Check keyboard state
 	const Uint8 *pStates = SDL_GetKeyboardState( nullptr );
 
-	if (pStates[SDL_SCANCODE_UP])
+	if (pStates[SDL_SCANCODE_UP] or pStates[SDL_SCANCODE_W])
 	{
 		m_Player->AddDirectionCurrentFrame(0, 1);
 	}
-	if (pStates[SDL_SCANCODE_DOWN])
+	if (pStates[SDL_SCANCODE_DOWN] or pStates[SDL_SCANCODE_S])
 	{
 		m_Player->AddDirectionCurrentFrame(0, -1);
 	}
-	if ( pStates[SDL_SCANCODE_RIGHT] )
+	if ( pStates[SDL_SCANCODE_RIGHT] or pStates[SDL_SCANCODE_D])
 	{
 		m_Player->AddDirectionCurrentFrame(1, 0);
 	}
-	if ( pStates[SDL_SCANCODE_LEFT] )
+	if ( pStates[SDL_SCANCODE_LEFT] or pStates[SDL_SCANCODE_A])
 	{
 		m_Player->AddDirectionCurrentFrame(-1, 0);
 	}
@@ -352,38 +353,6 @@ Rectf Game::MakeGlobalRect(const Rectf& rect, float const tileSide)
 	return result;
 }
 
-//bool Game::IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck)
-//{
-//	Rectf globalRect{ rect };
-//
-//	if (not isRectAlreadyGlobal)
-//	{
-//		globalRect = MakeGlobalRect(rect);
-//	}
-//
-//	auto beginIt{ m_LevelWalls.begin() + startIndex };
-//	auto endIt{ beginIt + nrToCheck };
-//
-//	auto wallIt = std::find_if(std::execution::par, beginIt, endIt, [&](const std::unique_ptr<dae::LevelObject>& wall)
-//	{
-//		auto wallShape{ wall->GetShape() };
-//
-//		if (utils::IsOverlapping(globalRect, wallShape))
-//		{
-//			return true;
-//		}
-//
-//		return false;
-//	});
-//
-//	if (wallIt != endIt)
-//	{
-//		return false;
-//	}
-//
-//	return true;
-//}
-
 void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck)
 {
 	thread_local Rectf globalRect{ rect };
@@ -411,12 +380,42 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 
 void Game::MakeNextFloor()
 {
-	auto asyncReturn{ std::async(std::launch::async, &Game::GenerateNewGoal, this, wallThickness)};
+	GenerateNewGoal(wallThickness);
 
-	m_Player->ResetPosition();
+	Rectf PlayerShape{ MakeNewPlayerShape() };
+
+	m_Player->ResetPosition(PlayerShape);
 	system("cls");
 	std::cout	<< "Find the exit of this floor!\n" 
 				<< "Score: " << ++m_PlayerScore << "\n";
 
-	asyncReturn.get();
+}
+
+Rectf Game::MakeNewPlayerShape()
+{
+	Rectf PlayerShape{};
+	bool isNewPlayerPosValid{ false };
+
+	while (not isNewPlayerPosValid)
+	{
+		auto newPlayerLocation{ GetRandomGridLocation(21, 21) };
+
+		PlayerShape = Rectf(static_cast<float>(newPlayerLocation.first), static_cast<float>(newPlayerLocation.second), 0.5f, 0.5f);
+		PlayerShape = MakeGlobalRect(PlayerShape);
+
+
+		std::promise<bool> promiseBool;
+		std::future<bool> futureBool = promiseBool.get_future();
+
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), PlayerShape, true, 0, static_cast<int>(m_LevelWalls.size()));
+
+		thread.join();
+
+		if (futureBool.get())
+		{
+			isNewPlayerPosValid = true;
+		}
+	}
+
+	return PlayerShape;
 }

@@ -42,13 +42,13 @@ private:
 
 	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
 	void GenerateNewGoal(float const wallSize);
-	//bool IsRectValid(const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck);
 	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck);
-	//void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal);
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
 
 	void MakeNextFloor();
+
+	Rectf MakeNewPlayerShape();
 
 	std::unique_ptr<Camera> m_Camera;
 	std::unique_ptr<dae::Player> m_Player;

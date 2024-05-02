@@ -20,7 +20,7 @@ namespace dae
 
 		void ResetDirectionThisFrame() { m_DirectionThisFrame = Vector2f(0, 0); }
 
-		void ResetPosition();
+		void ResetPosition(const Rectf& shape = Rectf());
 
 	private:
 		float const m_MoveSpeed{};
