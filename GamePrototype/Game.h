@@ -40,9 +40,11 @@ private:
 
 	void InitializeLevel();
 
+	void HandleInput(float elapsedSec);
+
 	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
 	void GenerateNewGoal(float const wallSize);
-	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck);
+	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating);
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
 
@@ -54,9 +56,20 @@ private:
 	std::unique_ptr<dae::Player> m_Player;
 	std::vector<dae::LevelObject> m_LevelWalls;
 	std::unique_ptr<dae::LevelObject> m_GoalObject;
+	std::unique_ptr<dae::LevelObject> m_GoalRadius;
 
 	float const wallThickness{ 50 };
 	int m_PlayerScore{ 0 };
 
 	std::mutex m_WallsMutex;
+
+	enum class ScreenfadeStage
+	{
+		NoFade,
+		FadingOut,
+		FadingIn
+	};
+
+	ScreenfadeStage m_FadingStage{ ScreenfadeStage::NoFade };
+	float m_FadeAlpha{};
 };

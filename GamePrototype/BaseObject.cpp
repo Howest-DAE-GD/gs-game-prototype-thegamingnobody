@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "BaseObject.h"
 #include "utils.h"
+#include <iostream>
 
 dae::BaseObject::BaseObject()
 	: m_Shape(Rectf(50, 50, 40, 40))

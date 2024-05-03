@@ -6,7 +6,9 @@ namespace dae
 	enum class LevelObjectTypes
 	{
 		Wall,
-		Goal
+		Goal,
+		FadeEffect,
+		GoalSpawnRadius
 	};
 
 
@@ -17,11 +19,12 @@ namespace dae
 		LevelObject(const Rectf& actualShape, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
 		LevelObject(const Rectf& shapeInTiles, float const TileSide, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
 
-		//LevelObject(const LevelObject& other) = default;
-		//LevelObject& operator=(const LevelObject& other) = default;
-		//LevelObject(LevelObject&& other) = default;
-		//LevelObject& operator=(LevelObject&& other) = default;
+		LevelObject(const LevelObject& other) = default;
+		LevelObject& operator=(const LevelObject& other) = default;
+		LevelObject(LevelObject&& other) = default;
+		LevelObject& operator=(LevelObject&& other) = default;
 
+		void SetAlpha(float const alphaOffset);
 
 		LevelObjectTypes GetObjecttype() const { return m_ObjectType; }
 
@@ -31,6 +34,6 @@ namespace dae
 		StateOfMatter GetStateByObjectType(const LevelObjectTypes& type);
 		Color4f GetColorByObjectType(const LevelObjectTypes& type);
 
-		LevelObjectTypes const m_ObjectType;
+		LevelObjectTypes m_ObjectType;
 	};
 }
