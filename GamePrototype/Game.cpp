@@ -132,8 +132,10 @@ void Game::Draw( ) const
 
 	for (auto& object : m_LevelWalls)
 	{
-		utils::SetColor(object.GetColor());
-		object.Draw();
+		if (object.IsEnabled())
+		{
+			object.Draw();
+		}
 	}
 
 
@@ -349,6 +351,22 @@ Rectf Game::MakeGlobalRect(const Rectf& rect, float const tileSide)
 	return result;
 }
 
+void Game::ResetWalls()
+{
+	for (auto& wall : m_LevelWalls)
+	{
+		wall.SetEnabled(true);
+	}
+}
+
+void Game::DisableOneWall()
+{
+	int const nrOfOuterWalls{ 4 }; //these are the first 4 walls in the vector and should be able to disable
+
+	int const rndmID{ (rand() % static_cast<int>(m_LevelWalls.size() - nrOfOuterWalls)) + nrOfOuterWalls };
+	m_LevelWalls[rndmID].SetEnabled(false);
+}
+
 void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating)
 {
 	thread_local Rectf globalRect{ rect };
@@ -388,6 +406,10 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 
 void Game::MakeNextFloor()
 {
+	ResetWalls();
+
+	DisableOneWall();
+
 	GenerateNewGoal(wallThickness);
 
 	Rectf PlayerShape{ MakeNewPlayerShape() };

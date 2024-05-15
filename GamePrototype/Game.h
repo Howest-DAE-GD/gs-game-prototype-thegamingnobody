@@ -48,6 +48,9 @@ private:
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
 
+	void ResetWalls();
+	void DisableOneWall();
+
 	void MakeNextFloor();
 
 	Rectf MakeNewPlayerShape();
