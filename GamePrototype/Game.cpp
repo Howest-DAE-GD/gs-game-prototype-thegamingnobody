@@ -25,8 +25,7 @@ void Game::Initialize( )
 	m_Player = std::make_unique<dae::Player>(playerShape, dae::StateOfMatter::solid, Color4f(0.43f, 0.96f, 0.42f, 1.0f), 300.0f);
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(0, 0, 1, 1), dae::LevelObjectTypes::GoalSpawnRadius);
 	InitializeLevel();
-	std::cout	<< "Find the exit of this floor!\n"
-				<< "Score: 0\n";
+	MakeNextFloor();
 
 }
 
@@ -68,6 +67,17 @@ void Game::Update( float elapsedSec )
 		if (m_FadingStage == ScreenfadeStage::NoFade)
 		{
 			m_FadingStage = ScreenfadeStage::FadingIn;
+		}
+	}
+
+	Circlef coinshape{ Circlef(m_Coin->GetCoinShape().center, m_Coin->GetCoinShape().radiusX) };
+
+	if (utils::IsOverlapping(playerShape, coinshape))
+	{
+		if (m_Coin->IsEnabled())
+		{
+			AddScore(1);
+			m_Coin->SetEnabled(false);
 		}
 	}
 
@@ -149,6 +159,11 @@ void Game::Draw( ) const
 	for (auto& object : m_DangerTiles)
 	{
 		object.Draw();
+	}
+
+	if (m_Coin->IsEnabled())
+	{
+		m_Coin->DrawCoin();
 	}
 
 	utils::SetColor(Color4f(0.4f, 0.4f, 0.4f, 1.0f));
@@ -365,6 +380,39 @@ void Game::GenerateNewGoal(float const wallSize)
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(GoalShape.left	- 152, GoalShape.bottom - 152, 250, 250), dae::LevelObjectTypes::GoalSpawnRadius);
 }
 
+void Game::GenerateNewCoin()
+{
+	bool isNewCoinValid{ false };
+	Ellipsef CoinShape{};
+
+	while (not isNewCoinValid)
+	{
+		int const coinRadius{ 20 };
+
+		//generate new rect
+		auto newGoalLocation{ GetRandomGridLocation(21, 21) };
+		CoinShape = Ellipsef(static_cast<float>(newGoalLocation.first) * (wallThickness * 1.5f), static_cast<float>(newGoalLocation.second) * (wallThickness * 1.5f), coinRadius, coinRadius);
+
+		//check validity
+		std::promise<bool> promiseBool;
+		std::future<bool> futureBool = promiseBool.get_future();
+
+		Rectf collisionShape{ static_cast<float>(newGoalLocation.first) * (wallThickness * 1.5f) - coinRadius, static_cast<float>(newGoalLocation.second) * (wallThickness * 1.5f) - coinRadius, 2 * coinRadius, 2 * coinRadius };
+
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), collisionShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
+
+		thread.join();
+
+		if (futureBool.get())
+		{
+			isNewCoinValid = true;
+		}
+	}
+
+	m_Coin = std::make_unique<dae::LevelObject>(CoinShape, dae::LevelObjectTypes::Coin);
+
+}
+
 Rectf Game::MakeGlobalRect(const Rectf& rect, float const tileSide)
 {
 	Rectf result{ Rectf(rect.left * tileSide, rect.bottom * tileSide, rect.width * tileSide, rect.height * tileSide) };
@@ -449,6 +497,8 @@ void Game::MakeNextFloor()
 
 	GenerateNewDangerTile(wallThickness);
 
+	GenerateNewCoin();
+
 	DisableOneWall();
 
 	GenerateNewGoal(wallThickness);
@@ -456,9 +506,7 @@ void Game::MakeNextFloor()
 	Rectf PlayerShape{ MakeNewPlayerShape() };
 
 	m_Player->ResetPosition(PlayerShape);
-	system("cls");
-	std::cout	<< "Find the exit of this floor!\n" 
-				<< "Score: " << ++m_PlayerScore << "\n";
+	AddScore(1);
 
 }
 
@@ -511,7 +559,7 @@ void Game::GenerateNewDangerTile(float const wallSize)
 	while (not isNewDangerTileValid)
 	{
 		//generate new rect
-		auto newGoalLocation{ GetRandomGridLocation(21, 21) };
+		auto newGoalLocation{ GetRandomGridLocation(18, 18) };
 		dangerTileShape = Rectf(static_cast<float>(newGoalLocation.first), static_cast<float>(newGoalLocation.second), 1, 1);
 
 		//edit rect for collision reasons
@@ -535,4 +583,13 @@ void Game::GenerateNewDangerTile(float const wallSize)
 
 	m_DangerTiles.emplace_back(dangerTileShape, dae::LevelObjectTypes::DangerTile, true);
 
+}
+
+void Game::AddScore(int const scoreToAdd)
+{
+	m_PlayerScore += scoreToAdd;
+
+	system("cls");
+	std::cout << "Find the exit of this floor!\n"
+		<< "Score: " << m_PlayerScore << "\n";
 }

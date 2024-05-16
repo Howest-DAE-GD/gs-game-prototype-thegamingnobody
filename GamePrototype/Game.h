@@ -44,6 +44,7 @@ private:
 
 	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
 	void GenerateNewGoal(float const wallSize);
+	void GenerateNewCoin();
 	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, bool checkDangerTiles = false);
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
@@ -58,15 +59,18 @@ private:
 
 	void GenerateNewDangerTile(float const wallSize);
 
+	void AddScore(int const scoreToAdd);
+
 	std::unique_ptr<Camera> m_Camera;
 	std::unique_ptr<dae::Player> m_Player;
 	std::vector<dae::LevelObject> m_LevelWalls;
 	std::unique_ptr<dae::LevelObject> m_GoalObject;
 	std::unique_ptr<dae::LevelObject> m_GoalRadius;
 	std::vector<dae::LevelObject> m_DangerTiles;
+	std::unique_ptr<dae::LevelObject> m_Coin;
 
 	float const wallThickness{ 50 };
-	int m_PlayerScore{ 0 };
+	int m_PlayerScore{ -1 };
 	int m_FloorsBeaten{ 0 };
 
 	int const m_FloorsPerDanger{ 3 };
