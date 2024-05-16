@@ -8,7 +8,8 @@ namespace dae
 		Wall,
 		Goal,
 		FadeEffect,
-		GoalSpawnRadius
+		GoalSpawnRadius,
+		DangerTile
 	};
 
 
@@ -16,8 +17,8 @@ namespace dae
 	{
 	public:
 		LevelObject();
-		LevelObject(const Rectf& actualShape, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
-		LevelObject(const Rectf& shapeInTiles, float const TileSide, const LevelObjectTypes& objectType = LevelObjectTypes::Wall);
+		LevelObject(const Rectf& actualShape, const LevelObjectTypes& objectType = LevelObjectTypes::Wall, bool hasSmallHitbox = false);
+		LevelObject(const Rectf& shapeInTiles, float const TileSide, const LevelObjectTypes& objectType = LevelObjectTypes::Wall, bool hasSmallHitbox = false);
 
 		LevelObject(const LevelObject& other) = default;
 		LevelObject& operator=(const LevelObject& other) = default;
@@ -35,5 +36,7 @@ namespace dae
 		Color4f GetColorByObjectType(const LevelObjectTypes& type);
 
 		LevelObjectTypes m_ObjectType;
+
+		
 	};
 }

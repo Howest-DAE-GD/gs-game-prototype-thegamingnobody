@@ -15,7 +15,7 @@ namespace dae
 	{
 	public:
 		BaseObject();
-		BaseObject(const Rectf& shape, const StateOfMatter& stateOfMatter = StateOfMatter::solid, const Color4f& Color = Color4f(1.0f, 1.0f, 1.0f, 1.0f), bool const isEnabled = true);
+		BaseObject(const Rectf& shape, const StateOfMatter& stateOfMatter = StateOfMatter::solid, const Color4f& Color = Color4f(1.0f, 1.0f, 1.0f, 1.0f), bool const isEnabled = true, bool hasSmallHitbox = false);
 
 		virtual void Update(float elapsedSec);
 		virtual void Draw() const;
@@ -23,7 +23,7 @@ namespace dae
 		void SetColor(const Color4f& newColor);
 		void SetColor(float const newR, float const newG, float const newB, float const newA);
 
-		Rectf GetShape() const;
+		Rectf GetShape(bool isCollisionRect) const;
 
 		StateOfMatter GetStateOfMatter() const { return m_StateOfMatter; }
 
@@ -40,5 +40,7 @@ namespace dae
 		Color4f m_SquareColor{};
 
 		bool m_IsEnabled{};
+
+		bool m_HasSmallHitBox;
 	};
 }

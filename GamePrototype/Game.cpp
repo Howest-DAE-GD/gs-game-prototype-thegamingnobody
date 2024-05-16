@@ -22,7 +22,7 @@ void Game::Initialize( )
 {
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
 	auto playerShape{ Rectf( 75.0f, 75.0f, 25.0f, 25.0f )};
-	m_Player = std::make_unique<dae::Player>(playerShape, dae::StateOfMatter::solid, Color4f(0.6f, 0.6f, 0.6f, 1.0f), 300.0f);
+	m_Player = std::make_unique<dae::Player>(playerShape, dae::StateOfMatter::solid, Color4f(0.43f, 0.96f, 0.42f, 1.0f), 300.0f);
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(0, 0, 1, 1), dae::LevelObjectTypes::GoalSpawnRadius);
 	InitializeLevel();
 	std::cout	<< "Find the exit of this floor!\n"
@@ -43,7 +43,7 @@ void Game::Update( float elapsedSec )
 	//make predicted player shape
 	auto const playerPredictedPos{ m_Player->PredictPosition(elapsedSec) };
 
-	auto playerShape{ m_Player->GetShape() };
+	auto playerShape{ m_Player->GetShape(true) };
 	playerShape.left = playerPredictedPos.x;
 	playerShape.bottom = playerPredictedPos.y;
 
@@ -58,12 +58,12 @@ void Game::Update( float elapsedSec )
 	{
 		std::promise<bool> promiseBool;
 		futureBools.emplace_back(promiseBool.get_future());
-		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false);
+		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, false);
 	}
 
 	threads.clear();
 
-	if (utils::IsOverlapping(playerShape, m_GoalObject->GetShape()))
+	if (utils::IsOverlapping(playerShape, m_GoalObject->GetShape(true)))
 	{
 		if (m_FadingStage == ScreenfadeStage::NoFade)
 		{
@@ -80,6 +80,25 @@ void Game::Update( float elapsedSec )
 		}
 	}
 
+	futureBools.clear();
+
+	for (unsigned int i = 0; i < nrOfThreads; i++)
+	{
+		std::promise<bool> promiseBool;
+		futureBools.emplace_back(promiseBool.get_future());
+		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, true);
+	}
+
+	threads.clear();
+
+	for (auto& future : futureBools)
+	{
+		if (not future.get())
+		{
+			m_Player->MarkDie();
+			break;
+		}
+	}
 
 	float const timeToFade{ 1.0f };
 	float const maxAlpha{ 1.0f };
@@ -123,10 +142,15 @@ void Game::Draw( ) const
 
 	glPushMatrix();
 
-	m_Camera->Transform(m_Player->GetShape(), false);
+	m_Camera->Transform(m_Player->GetShape(false), false);
 
 	m_GoalObject->Draw();
-	
+
+	for (auto& object : m_DangerTiles)
+	{
+		object.Draw();
+	}
+
 	utils::SetColor(Color4f(0.4f, 0.4f, 0.4f, 1.0f));
 	m_Player->Draw();
 
@@ -321,17 +345,13 @@ void Game::GenerateNewGoal(float const wallSize)
 		//edit rect for collision reasons
 		GoalShape = MakeGlobalRect(GoalShape, wallSize);
 
-		int const outerBorder{ 2 };
-		GoalShape.width -= 2 * outerBorder;
-		GoalShape.height -= 2 * outerBorder;
-		GoalShape.left += outerBorder;
-		GoalShape.bottom += outerBorder;
+		GoalShape = ShrinkRect(GoalShape, 2);
 
 		//check validity
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true, 0, static_cast<int>(m_LevelWalls.size()), true);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
 
 		thread.join();
 
@@ -341,7 +361,7 @@ void Game::GenerateNewGoal(float const wallSize)
 		}
 	}
 
-	m_GoalObject = std::make_unique<dae::LevelObject>(GoalShape, dae::LevelObjectTypes::Goal);
+	m_GoalObject = std::make_unique<dae::LevelObject>(GoalShape, dae::LevelObjectTypes::Goal, true);
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(GoalShape.left	- 152, GoalShape.bottom - 152, 250, 250), dae::LevelObjectTypes::GoalSpawnRadius);
 }
 
@@ -367,7 +387,7 @@ void Game::DisableOneWall()
 	m_LevelWalls[rndmID].SetEnabled(false);
 }
 
-void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating)
+void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, bool checkDangerTiles)
 {
 	thread_local Rectf globalRect{ rect };
 
@@ -377,13 +397,12 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 	{
 		globalRect = Rectf(rect.left * wallSize, rect.bottom * wallSize, rect.width * wallSize, rect.height * wallSize);
 	}
-
-	for (int i = startIndex; i < nrToCheck; i++)
+	if (checkDangerTiles)
 	{
-		
-		if (m_LevelWalls[i].GetObjecttype() == dae::LevelObjectTypes::Wall)
+
+		for (int i = 0; i < m_DangerTiles.size(); i++)
 		{
-			auto wallShape{ m_LevelWalls[i].GetShape()};
+			auto wallShape{ m_DangerTiles[i].GetShape(true)};
 
 			if (utils::IsOverlapping(globalRect, wallShape))
 			{
@@ -392,9 +411,27 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 			}
 		}
 	}
+	else
+	{
+		for (int i = startIndex; i < nrToCheck; i++)
+		{
+		
+			if (m_LevelWalls[i].GetObjecttype() == dae::LevelObjectTypes::Wall)
+			{
+				auto wallShape{ m_LevelWalls[i].GetShape(true)};
+
+				if (utils::IsOverlapping(globalRect, wallShape))
+				{
+					promise.set_value(false);
+					return;
+				}
+			}
+		}
+	}
+
 	if (isGenerating)
 	{
-		if (utils::IsOverlapping(globalRect, m_GoalRadius.get()->GetShape()))
+		if (utils::IsOverlapping(globalRect, m_GoalRadius.get()->GetShape(false)))
 		{
 			promise.set_value(false);
 			return;
@@ -406,7 +443,11 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 
 void Game::MakeNextFloor()
 {
+	m_FloorsBeaten++;
+
 	ResetWalls();
+
+	GenerateNewDangerTile(wallThickness);
 
 	DisableOneWall();
 
@@ -437,7 +478,7 @@ Rectf Game::MakeNewPlayerShape()
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), PlayerShape, true, 0, static_cast<int>(m_LevelWalls.size()), true);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), PlayerShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
 
 		thread.join();
 
@@ -448,4 +489,50 @@ Rectf Game::MakeNewPlayerShape()
 	}
 
 	return PlayerShape;
+}
+
+Rectf Game::ShrinkRect(const Rectf& rect, int const shrinkAmount)
+{
+	Rectf result{ rect };
+
+	result.width	-= 2 *	shrinkAmount;
+	result.height	-= 2 *	shrinkAmount;
+	result.left		+=		shrinkAmount;
+	result.bottom	+=		shrinkAmount;
+
+	return result;
+}
+
+void Game::GenerateNewDangerTile(float const wallSize)
+{
+	bool  isNewDangerTileValid{ false };
+	Rectf dangerTileShape{};
+
+	while (not isNewDangerTileValid)
+	{
+		//generate new rect
+		auto newGoalLocation{ GetRandomGridLocation(21, 21) };
+		dangerTileShape = Rectf(static_cast<float>(newGoalLocation.first), static_cast<float>(newGoalLocation.second), 1, 1);
+
+		//edit rect for collision reasons
+		dangerTileShape = MakeGlobalRect(dangerTileShape, wallSize);
+
+		dangerTileShape = ShrinkRect(dangerTileShape, 2);
+		
+		//check validity
+		std::promise<bool> promiseBool;
+		std::future<bool> futureBool = promiseBool.get_future();
+
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), dangerTileShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, true);
+
+		thread.join();
+
+		if (futureBool.get())
+		{
+			isNewDangerTileValid = true;
+		}
+	}
+
+	m_DangerTiles.emplace_back(dangerTileShape, dae::LevelObjectTypes::DangerTile, true);
+
 }

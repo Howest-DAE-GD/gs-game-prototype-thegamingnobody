@@ -22,10 +22,14 @@ namespace dae
 
 		void ResetPosition(const Rectf& shape = Rectf());
 
+		void MarkDie();
+
 	private:
 		float const m_MoveSpeed{};
 
 		Vector2f m_DirectionThisFrame{};
 		Rectf const m_PlayerStartingShape;
+
+		bool m_IsAlive;
 	};
 }
