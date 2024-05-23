@@ -396,8 +396,11 @@ void Game::GenerateNewCoin()
 		int const coinRadius{ 20 };
 
 		//generate new rect
-		auto newGoalLocation{ GetRandomGridLocation(21, 21) };
-		CoinShape = Ellipsef(static_cast<float>(newGoalLocation.first) * (wallThickness * 1.5f), static_cast<float>(newGoalLocation.second) * (wallThickness * 1.5f), coinRadius, coinRadius);
+		auto newGoalLocation{ GetRandomGridLocation(18, 18) };
+		CoinShape = Ellipsef(static_cast<float>(newGoalLocation.first) * (wallThickness), static_cast<float>(newGoalLocation.second) * (wallThickness), coinRadius, coinRadius);
+		CoinShape.center.x += wallThickness / 2;
+		CoinShape.center.y += wallThickness / 2;
+
 
 		//check validity
 		std::promise<bool> promiseBool;

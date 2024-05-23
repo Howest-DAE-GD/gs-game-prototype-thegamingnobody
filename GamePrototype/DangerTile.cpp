@@ -81,6 +81,7 @@ bool dae::DangerTile::IsOn() const
 
 void dae::DangerTile::RandomizeCooldown(float const min, float const max, float const interval)
 {
+	SetColor(Color4f(0.43f, 0.96f, 0.42f, 1.0f));
 	int randMin{ static_cast<int>(min / interval) };
 	int randMax{ static_cast<int>(max / interval) };
 
