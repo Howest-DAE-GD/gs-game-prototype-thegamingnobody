@@ -144,6 +144,12 @@ void Game::Update( float elapsedSec )
 		MakeNextFloor();
 	}
 
+	for (auto& object : m_DangerTiles)
+	{
+		object.Update(elapsedSec);
+	}
+
+
 }
 
 void Game::Draw( ) const
@@ -452,7 +458,7 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 		{
 			auto wallShape{ m_DangerTiles[i].GetShape(true)};
 
-			if (utils::IsOverlapping(globalRect, wallShape))
+			if (utils::IsOverlapping(globalRect, wallShape) and m_DangerTiles[i].IsOn())
 			{
 				promise.set_value(false);
 				return;
@@ -559,8 +565,8 @@ void Game::GenerateNewDangerTile(float const wallSize)
 	while (not isNewDangerTileValid)
 	{
 		//generate new rect
-		auto newGoalLocation{ GetRandomGridLocation(18, 18) };
-		dangerTileShape = Rectf(static_cast<float>(newGoalLocation.first), static_cast<float>(newGoalLocation.second), 1, 1);
+		auto newTileLocation{ GetRandomGridLocation(18, 18) };
+		dangerTileShape = Rectf(static_cast<float>(newTileLocation.first), static_cast<float>(newTileLocation.second), 1, 1);
 
 		//edit rect for collision reasons
 		dangerTileShape = MakeGlobalRect(dangerTileShape, wallSize);
@@ -581,7 +587,7 @@ void Game::GenerateNewDangerTile(float const wallSize)
 		}
 	}
 
-	m_DangerTiles.emplace_back(dangerTileShape, dae::LevelObjectTypes::DangerTile, true);
+	m_DangerTiles.emplace_back(dangerTileShape, true);
 
 }
 

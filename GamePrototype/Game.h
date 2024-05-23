@@ -9,6 +9,7 @@
 #include "LevelObject.h"
 #include <future>
 #include <mutex>
+#include "DangerTile.h"
 
 class Game : public BaseGame
 {
@@ -66,7 +67,7 @@ private:
 	std::vector<dae::LevelObject> m_LevelWalls;
 	std::unique_ptr<dae::LevelObject> m_GoalObject;
 	std::unique_ptr<dae::LevelObject> m_GoalRadius;
-	std::vector<dae::LevelObject> m_DangerTiles;
+	std::vector<dae::DangerTile> m_DangerTiles;
 	std::unique_ptr<dae::LevelObject> m_Coin;
 
 	float const wallThickness{ 50 };
