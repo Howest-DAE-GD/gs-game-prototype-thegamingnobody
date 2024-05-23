@@ -57,7 +57,7 @@ void Game::Update( float elapsedSec )
 	{
 		std::promise<bool> promiseBool;
 		futureBools.emplace_back(promiseBool.get_future());
-		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, false);
+		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, CheckingMode::walls);
 	}
 
 	threads.clear();
@@ -96,7 +96,7 @@ void Game::Update( float elapsedSec )
 	{
 		std::promise<bool> promiseBool;
 		futureBools.emplace_back(promiseBool.get_future());
-		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, true);
+		threads.emplace_back(&Game::IsRectValidPromise, this, std::move(promiseBool), playerShape, true, i * nrPerThread, nrPerThread, false, CheckingMode::dangerTiles);
 	}
 
 	threads.clear();
@@ -372,7 +372,7 @@ void Game::GenerateNewGoal(float const wallSize)
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), GoalShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
 
 		thread.join();
 
@@ -408,7 +408,7 @@ void Game::GenerateNewCoin()
 
 		Rectf collisionShape{ static_cast<float>(newGoalLocation.first) * (wallThickness * 1.5f) - coinRadius, static_cast<float>(newGoalLocation.second) * (wallThickness * 1.5f) - coinRadius, 2 * coinRadius, 2 * coinRadius };
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), collisionShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), collisionShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
 
 		thread.join();
 
@@ -444,7 +444,7 @@ void Game::DisableOneWall()
 	m_LevelWalls[rndmID].SetEnabled(false);
 }
 
-void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, bool checkDangerTiles)
+void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, CheckingMode checkingMode)
 {
 	thread_local Rectf globalRect{ rect };
 
@@ -454,7 +454,8 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 	{
 		globalRect = Rectf(rect.left * wallSize, rect.bottom * wallSize, rect.width * wallSize, rect.height * wallSize);
 	}
-	if (checkDangerTiles)
+
+	if (checkingMode == CheckingMode::dangerTiles or checkingMode == CheckingMode::both)
 	{
 
 		for (int i = 0; i < m_DangerTiles.size(); i++)
@@ -468,7 +469,8 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 			}
 		}
 	}
-	else
+	
+	if (checkingMode == CheckingMode::walls or checkingMode == CheckingMode::both)
 	{
 		for (int i = startIndex; i < nrToCheck; i++)
 		{
@@ -535,7 +537,7 @@ Rectf Game::MakeNewPlayerShape()
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), PlayerShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, false);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), PlayerShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
 
 		thread.join();
 
@@ -580,7 +582,7 @@ void Game::GenerateNewDangerTile(float const wallSize)
 		std::promise<bool> promiseBool;
 		std::future<bool> futureBool = promiseBool.get_future();
 
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), dangerTileShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, true);
+		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), dangerTileShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
 
 		thread.join();
 

@@ -2,10 +2,10 @@
 #include "DangerTile.h"
 #include <utils.h>
 
-#define COOLDOWN_MIN 4.0f
-#define COOLDOWN_MAX 5.0f
+#define COOLDOWN_MIN 3.0f
+#define COOLDOWN_MAX 4.0f
 #define COOLDOWN_INTERVAL 0.1f
-#define TURNING_ON_TIME 1.5f
+#define TURNING_ON_TIME 1.0f
 #define TIME_ON 3.0f
 
 dae::DangerTile::DangerTile(const Rectf& actualShape, bool hasSmallHitbox)

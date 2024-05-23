@@ -42,11 +42,18 @@ private:
 	void InitializeLevel();
 
 	void HandleInput(float elapsedSec);
+	
+	enum class CheckingMode
+	{
+		dangerTiles,
+		walls,
+		both
+	};
 
 	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
 	void GenerateNewGoal(float const wallSize);
 	void GenerateNewCoin();
-	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, bool checkDangerTiles = false);
+	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, CheckingMode checkingMode);
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
 
