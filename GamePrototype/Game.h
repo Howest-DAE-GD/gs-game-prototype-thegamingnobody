@@ -10,6 +10,7 @@
 #include <future>
 #include <mutex>
 #include "DangerTile.h"
+#include "LoopTimer.h"
 
 class Game : public BaseGame
 {
@@ -35,7 +36,7 @@ public:
 private:
 
 	// FUNCTIONS
-	void Initialize();
+	void Initialize(bool addScore = true);
 	void Cleanup( );
 	void ClearBackground( ) const;
 
@@ -52,7 +53,7 @@ private:
 
 	std::pair<int, int> GetRandomGridLocation(int const maxX, int const maxY);
 	void GenerateNewGoal(float const wallSize);
-	void GenerateNewCoin();
+	void GenerateNewCoin(int const amountOfCoins);
 	void IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, bool const isRectAlreadyGlobal, int const startIndex, int const nrToCheck, bool isGenerating, CheckingMode checkingMode);
 
 	Rectf MakeGlobalRect(const Rectf& rect, float const tileSide = 50.0f);
@@ -60,14 +61,14 @@ private:
 	void ResetWalls();
 	void DisableOneWall();
 
-	void MakeNextFloor();
+	void MakeNextFloor(bool addScore = true);
 
 	Rectf MakeNewPlayerShape();
 	Rectf ShrinkRect(const Rectf& rect, int const shrinkAmount = 2);
 
 	void GenerateNewDangerTile(float const wallSize);
 
-	void AddScore(int const scoreToAdd);
+	void ResetGame();
 
 	std::unique_ptr<Camera> m_Camera;
 	std::unique_ptr<dae::Player> m_Player;
@@ -75,16 +76,16 @@ private:
 	std::unique_ptr<dae::LevelObject> m_GoalObject;
 	std::unique_ptr<dae::LevelObject> m_GoalRadius;
 	std::vector<dae::DangerTile> m_DangerTiles;
-	std::unique_ptr<dae::LevelObject> m_Coin;
+	std::vector<dae::LevelObject> m_Coin;
 
 	float const wallThickness{ 50 };
-	int m_PlayerScore{ -1 };
 	int m_FloorsBeaten{ 0 };
 
 	int const m_FloorsPerDanger{ 3 };
 
-
 	std::mutex m_WallsMutex;
+
+	LoopTimer m_Timer{};
 
 	enum class ScreenfadeStage
 	{

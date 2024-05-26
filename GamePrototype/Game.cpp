@@ -18,19 +18,19 @@ Game::~Game( )
 	Cleanup( );
 }
 
-void Game::Initialize( )
+void Game::Initialize(bool addScore)
 {
 	m_Camera = std::make_unique<Camera>(Camera(GetViewPort().width, GetViewPort().height));
 	auto playerShape{ Rectf( 75.0f, 75.0f, 25.0f, 25.0f )};
 	m_Player = std::make_unique<dae::Player>(playerShape, dae::StateOfMatter::solid, Color4f(0.43f, 0.96f, 0.42f, 1.0f), 300.0f);
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(0, 0, 1, 1), dae::LevelObjectTypes::GoalSpawnRadius);
 	InitializeLevel();
-	MakeNextFloor();
-
+	MakeNextFloor(addScore);
 }
 
 void Game::Cleanup( )
 {
+	
 }
 
 void Game::Update( float elapsedSec )
@@ -38,6 +38,8 @@ void Game::Update( float elapsedSec )
 	bool goalNotReached{ true }; //if reached this frame
 
 	HandleInput(elapsedSec);
+
+	m_Timer.Update(elapsedSec);
 
 	//make predicted player shape
 	auto const playerPredictedPos{ m_Player->PredictPosition(elapsedSec) };
@@ -67,17 +69,22 @@ void Game::Update( float elapsedSec )
 		if (m_FadingStage == ScreenfadeStage::NoFade)
 		{
 			m_FadingStage = ScreenfadeStage::FadingIn;
+
 		}
 	}
-
-	Circlef coinshape{ Circlef(m_Coin->GetCoinShape().center, m_Coin->GetCoinShape().radiusX) };
-
-	if (utils::IsOverlapping(playerShape, coinshape))
+	
+	for (auto& object : m_Coin)
 	{
-		if (m_Coin->IsEnabled())
+		Circlef coinshape{ Circlef(object.GetCoinShape().center, object.GetCoinShape().radiusX) };
+
+		if (utils::IsOverlapping(playerShape, coinshape))
 		{
-			AddScore(1);
-			m_Coin->SetEnabled(false);
+			if (object.IsEnabled())
+			{
+				m_Timer.AddScore(1);
+				object.SetEnabled(false);
+
+			}
 		}
 	}
 
@@ -110,6 +117,16 @@ void Game::Update( float elapsedSec )
 		}
 	}
 
+	if (m_Timer.HasTimerEnded())
+	{
+		if (m_Timer.IsPaused())
+		{
+			m_Timer.TogglePause();
+		}
+		m_Player->MarkDie();
+		
+	}
+
 	float const timeToFade{ 1.0f };
 	float const maxAlpha{ 1.0f };
 	float const alphaOffset{ (maxAlpha / timeToFade) * elapsedSec * 2 };
@@ -129,6 +146,10 @@ void Game::Update( float elapsedSec )
 		{
 			m_FadingStage = ScreenfadeStage::FadingOut;
 			goalNotReached = false;
+			if (not m_Timer.IsPaused())
+			{
+				m_Timer.TogglePause();
+			}
 		}
 		break;
 	case Game::ScreenfadeStage::NoFade:
@@ -167,9 +188,12 @@ void Game::Draw( ) const
 		object.Draw();
 	}
 
-	if (m_Coin->IsEnabled())
+	for (auto& object : m_Coin)
 	{
-		m_Coin->DrawCoin();
+		if (object.IsEnabled())
+		{
+			object.DrawCoin();
+		}
 	}
 
 	utils::SetColor(Color4f(0.4f, 0.4f, 0.4f, 1.0f));
@@ -183,9 +207,22 @@ void Game::Draw( ) const
 		}
 	}
 
+	glPopMatrix();
+
+	if (not m_Timer.IsPaused())
+	{
+		m_Timer.Draw();
+	}
+
+	glPushMatrix();
+
+	m_Camera->Transform(m_Player->GetShape(false), false);
+	
+	(m_LevelWalls.end() - 1)->Draw();
 
 	glPopMatrix();
 }
+
 
 void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
 {
@@ -211,19 +248,12 @@ void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
 void Game::ProcessKeyUpEvent( const SDL_KeyboardEvent& e )
 {
 	//std::cout << "KEYUP event: " << e.keysym.sym << std::endl;
-	//switch ( e.keysym.sym )
-	//{
-	//case SDLK_LEFT:
-	//	m_Position.x -= 1;
-	//	break;
-	//case SDLK_RIGHT:
-	//	m_Position.x += 1;
-	//	break;
-	//case SDLK_1:
-	//case SDLK_KP_1:
-	//	//std::cout << "Key 1 released\n";
-	//	break;
-	//}
+	switch ( e.keysym.sym )
+	{
+	case SDLK_r:
+		ResetGame();
+		break;
+	}
 }
 
 void Game::ProcessMouseMotionEvent( const SDL_MouseMotionEvent& e )
@@ -386,39 +416,43 @@ void Game::GenerateNewGoal(float const wallSize)
 	m_GoalRadius = std::make_unique<dae::LevelObject>(Rectf(GoalShape.left	- 152, GoalShape.bottom - 152, 250, 250), dae::LevelObjectTypes::GoalSpawnRadius);
 }
 
-void Game::GenerateNewCoin()
+void Game::GenerateNewCoin(int const amountOfCoins)
 {
 	bool isNewCoinValid{ false };
 	Ellipsef CoinShape{};
-
-	while (not isNewCoinValid)
+	
+	for (int i = 0; i < amountOfCoins; i++)
 	{
-		int const coinRadius{ 20 };
-
-		//generate new rect
-		auto newGoalLocation{ GetRandomGridLocation(18, 18) };
-		CoinShape = Ellipsef(static_cast<float>(newGoalLocation.first) * (wallThickness), static_cast<float>(newGoalLocation.second) * (wallThickness), coinRadius, coinRadius);
-		CoinShape.center.x += wallThickness / 2;
-		CoinShape.center.y += wallThickness / 2;
-
-
-		//check validity
-		std::promise<bool> promiseBool;
-		std::future<bool> futureBool = promiseBool.get_future();
-
-		Rectf collisionShape{ static_cast<float>(newGoalLocation.first) * (wallThickness * 1.5f) - coinRadius, static_cast<float>(newGoalLocation.second) * (wallThickness * 1.5f) - coinRadius, 2 * coinRadius, 2 * coinRadius };
-
-		std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), collisionShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
-
-		thread.join();
-
-		if (futureBool.get())
+		while (not isNewCoinValid)
 		{
-			isNewCoinValid = true;
-		}
-	}
+			int const coinRadius{ 20 };
 
-	m_Coin = std::make_unique<dae::LevelObject>(CoinShape, dae::LevelObjectTypes::Coin);
+			//generate new rect
+			auto newGoalLocation{ GetRandomGridLocation(18, 18) };
+			CoinShape = Ellipsef(static_cast<float>(newGoalLocation.first) * (wallThickness), static_cast<float>(newGoalLocation.second) * (wallThickness), coinRadius, coinRadius);
+			CoinShape.center.x += coinRadius;
+			CoinShape.center.y += coinRadius;
+
+
+			//check validity
+			std::promise<bool> promiseBool;
+			std::future<bool> futureBool = promiseBool.get_future();
+
+			Rectf collisionShape{ static_cast<float>(newGoalLocation.first) * (wallThickness) - coinRadius, static_cast<float>(newGoalLocation.second) * (wallThickness) - coinRadius, 2 * coinRadius, 2 * coinRadius };
+
+			std::thread thread(&Game::IsRectValidPromise, this, std::move(promiseBool), collisionShape, true, 0, static_cast<int>(m_LevelWalls.size()), true, CheckingMode::both);
+
+			thread.join();
+
+			if (futureBool.get())
+			{
+				isNewCoinValid = true;
+			}
+		}
+
+		m_Coin.emplace_back(CoinShape, dae::LevelObjectTypes::Coin);
+		isNewCoinValid = false;
+	}
 
 }
 
@@ -434,6 +468,8 @@ void Game::ResetWalls()
 	{
 		wall.SetEnabled(true);
 	}
+
+	m_Coin.clear();
 }
 
 void Game::DisableOneWall()
@@ -500,15 +536,23 @@ void Game::IsRectValidPromise(std::promise<bool> promise, const Rectf& rect, boo
 	promise.set_value(true);
 }
 
-void Game::MakeNextFloor()
+void Game::MakeNextFloor(bool addScore)
 {
+	m_Timer.SetTimer(0, 31);
+	//m_Timer.SetTimer(0, 5);
+
+	if (m_Timer.IsPaused())
+	{
+		m_Timer.TogglePause();
+	}
+
 	m_FloorsBeaten++;
 
 	ResetWalls();
 
 	GenerateNewDangerTile(wallThickness);
 
-	GenerateNewCoin();
+	GenerateNewCoin((rand() % 4)+1);
 
 	DisableOneWall();
 
@@ -517,7 +561,10 @@ void Game::MakeNextFloor()
 	Rectf PlayerShape{ MakeNewPlayerShape() };
 
 	m_Player->ResetPosition(PlayerShape);
-	AddScore(1);
+	if (addScore)
+	{
+		m_Timer.AddScore(1);
+	}
 
 }
 
@@ -596,11 +643,16 @@ void Game::GenerateNewDangerTile(float const wallSize)
 
 }
 
-void Game::AddScore(int const scoreToAdd)
+void Game::ResetGame()
 {
-	m_PlayerScore += scoreToAdd;
+	m_Timer.Reset();
 
-	system("cls");
-	std::cout << "Find the exit of this floor!\n"
-		<< "Score: " << m_PlayerScore << "\n";
+	ResetWalls();
+	m_Player.reset();
+	m_GoalObject.reset();
+	m_GoalRadius.reset();
+	m_DangerTiles.clear();
+	m_Coin.clear();
+
+	Initialize(false);
 }

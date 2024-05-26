@@ -156,6 +156,7 @@ xcopy "$(SolutionDir)Resources\*.*" "$(TargetDir)" /y /d /s</Command>
     <ClCompile Include="DangerTile.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="LevelObject.cpp" />
+    <ClCompile Include="LoopTimer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -166,6 +167,7 @@ xcopy "$(SolutionDir)Resources\*.*" "$(TargetDir)" /y /d /s</Command>
     <ClInclude Include="DangerTile.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="LevelObject.h" />
+    <ClInclude Include="LoopTimer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
   </ItemGroup>
