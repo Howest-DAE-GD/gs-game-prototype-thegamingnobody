@@ -23,6 +23,8 @@ public:
 
 	void Reset();
 
+	void PlayerDied() {	m_PlayerDied = true; }
+
 private:
 	std::vector<Texture> m_NumberTexturesBorder;
 	std::vector<Texture> m_NumberTexturesInner;
@@ -44,4 +46,6 @@ private:
 	bool m_TimerPaused;
 
 	int m_PlayerScore{ -1 };
+
+	bool m_PlayerDied{ false };
 };

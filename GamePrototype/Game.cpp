@@ -112,6 +112,7 @@ void Game::Update( float elapsedSec )
 	{
 		if (not future.get())
 		{
+			m_Timer.PlayerDied();
 			m_Player->MarkDie();
 			break;
 		}
@@ -119,10 +120,7 @@ void Game::Update( float elapsedSec )
 
 	if (m_Timer.HasTimerEnded())
 	{
-		if (m_Timer.IsPaused())
-		{
-			m_Timer.TogglePause();
-		}
+		m_Timer.PlayerDied();
 		m_Player->MarkDie();
 		
 	}

@@ -54,7 +54,10 @@ void LoopTimer::Update(float elapsedSec)
 {
 	float elapsedMiliSec{ elapsedSec * 1000 };
 
-	m_CountDown -= elapsedMiliSec;
+	if (not m_PlayerDied)
+	{
+		m_CountDown -= elapsedMiliSec;
+	}
 
 }
 
